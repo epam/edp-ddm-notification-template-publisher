@@ -16,37 +16,41 @@
 
 package com.epam.digital.data.platform.notification.service;
 
+import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
+import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
+import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
 import com.epam.digital.data.platform.notification.exceptions.NotificationBuildingException;
-import com.epam.digital.data.platform.notification.model.NotificationTemplate;
-import com.epam.digital.data.platform.notification.repository.NotificationTemplateRepository;
-import org.apache.commons.codec.digest.DigestUtils;
+import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
+import com.epam.digital.data.platform.notification.model.NotificationYamlObject;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Base64;
+import java.util.stream.Collectors;
 
-@Service
-public class NotificationService {
-  private final Logger log = LoggerFactory.getLogger(NotificationService.class);
+@Slf4j
+@RequiredArgsConstructor
+public class EmailNotificationLoader implements NotificationDirectoryLoader {
 
-  private final NotificationTemplateRepository notificationTemplateRepository;
+  private final NotificationTemplateRestClient templateRestClient;
+  private final JsonSchemaFileValidator emailSchemaValidator;
+  private final ObjectMapper yamlMapper;
 
-  public NotificationService(NotificationTemplateRepository notificationTemplateRepository) {
-    this.notificationTemplateRepository = notificationTemplateRepository;
-  }
-
+  @Override
   public void loadDir(File dir) {
-    var indexFile = Path.of(dir.getPath(), "notification.ftlh").toFile();
+    log.info("Processing email template {}", dir.getName());
     try {
+      var indexFile = Path.of(dir.getPath(), "notification.ftlh").toFile();
       var htmlString = FileUtils.readFileToString(indexFile, StandardCharsets.UTF_8);
       var document = Jsoup.parse(htmlString);
       document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
@@ -54,16 +58,30 @@ public class NotificationService {
       embedImagesToHtml(document, dir);
       embedStyleToHtml(document, dir);
 
-      String channel = dir.getParentFile().getName();
-      var template = new NotificationTemplate();
-      template.setContent(document.toString());
-      template.setName(dir.getName());
-      template.setChannel(channel);
-      template.setChecksum(DigestUtils.sha256Hex(document.toString()));
-
-      save(template);
+      SaveNotificationTemplateInputDto inputDto;
+      var templateMetadataFile = Path.of(dir.getPath(), "notification.yml").toFile();
+      if (templateMetadataFile.exists()) {
+        emailSchemaValidator.validate(templateMetadataFile);
+        var templateMetadata =
+            yamlMapper.readValue(templateMetadataFile, NotificationYamlObject.class);
+        inputDto =
+            SaveNotificationTemplateInputDto.builder()
+                .content(document.toString())
+                .title(templateMetadata.getTitle())
+                .attributes(
+                    templateMetadata.getAttributes().entrySet().stream()
+                        .map(
+                            attr ->
+                                new NotificationTemplateAttributeDto(
+                                    attr.getKey(), attr.getValue()))
+                        .collect(Collectors.toList()))
+                .build();
+      } else {
+        inputDto = SaveNotificationTemplateInputDto.builder().content(document.toString()).build();
+      }
+      templateRestClient.saveTemplate("email", dir.getName(), inputDto);
     } catch (Exception e) {
-      log.error("Failded processing template {}. Error message: {}", dir.getName(), e.getMessage());
+      log.error("Failed processing template {}. Error: {}", dir.getName(), e);
     }
   }
 
@@ -98,20 +116,5 @@ public class NotificationService {
         }
       }
     }
-  }
-
-  private void save(NotificationTemplate newTemplate) {
-    var saved = notificationTemplateRepository.findByNameAndChannel(newTemplate.getName(), newTemplate.getChannel());
-    if (saved == null) {
-      notificationTemplateRepository.save(newTemplate);
-      return;
-    }
-
-    if (saved.getChecksum().equals(newTemplate.getChecksum())) {
-      return;
-    }
-
-    saved.update(newTemplate);
-    notificationTemplateRepository.save(saved);
   }
 }

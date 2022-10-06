@@ -1,0 +1,5 @@
+notification-service:
+  url: http://localhost:8080
+
+thirdPartySystems:
+  accessToken: token

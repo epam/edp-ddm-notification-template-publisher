@@ -5,7 +5,7 @@
  * you may not use this file except in compliance with the License.
  * You may obtain a copy of the License at
  *
- *      https://www.apache.org/licenses/LICENSE-2.0
+ *    https://www.apache.org/licenses/LICENSE-2.0
  *
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
@@ -14,13 +14,11 @@
  * limitations under the License.
  */
 
-package com.epam.digital.data.platform.notification.repository;
+package com.epam.digital.data.platform.notification.exceptions;
 
-import com.epam.digital.data.platform.notification.model.NotificationTemplate;
-import org.springframework.data.repository.CrudRepository;
+public class JsonSchemaValidationException extends RuntimeException {
 
-import java.util.UUID;
-
-public interface NotificationTemplateRepository extends CrudRepository<NotificationTemplate, UUID> {
-  NotificationTemplate findByNameAndChannel(String name, String channel);
+  public JsonSchemaValidationException(String message) {
+    super(message);
+  }
 }

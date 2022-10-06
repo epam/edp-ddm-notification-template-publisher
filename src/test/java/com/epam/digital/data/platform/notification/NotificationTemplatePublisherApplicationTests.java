@@ -17,7 +17,7 @@
 package com.epam.digital.data.platform.notification;
 
 import com.epam.digital.data.platform.notification.properties.AppProperties;
-import com.epam.digital.data.platform.notification.service.NotificationService;
+import com.epam.digital.data.platform.notification.service.EmailNotificationLoader;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,6 +27,7 @@ import org.springframework.test.context.junit.jupiter.SpringExtension;
 import org.springframework.util.ResourceUtils;
 
 import java.io.FileNotFoundException;
+import java.util.Map;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
@@ -41,7 +42,7 @@ class NotificationTemplatePublisherApplicationTests {
   private ApplicationArguments args;
 
   @Mock
-  private NotificationService notificationService;
+  private EmailNotificationLoader emailNotificationLoader;
 
   private String notificationDirectoryName;
   private AppProperties appProperties;
@@ -52,24 +53,26 @@ class NotificationTemplatePublisherApplicationTests {
     notificationDirectoryName = ResourceUtils.getFile("classpath:notifications").getAbsolutePath();
     appProperties = new AppProperties();
     appProperties.setNotificationsDirectoryName(notificationDirectoryName);
-    notificationTemplatePublisherApplication = new NotificationTemplatePublisherApplication(appProperties, notificationService);
+    notificationTemplatePublisherApplication =
+        new NotificationTemplatePublisherApplication(
+            appProperties, Map.of("email", emailNotificationLoader));
   }
 
   @Test
-  void shouldCallServiceForEachFolder() throws Exception {
+  void shouldCallServiceForEachFolder() {
     when(args.containsOption("notification_templates")).thenReturn(true);
     notificationTemplatePublisherApplication.run(args);
 
-    verify(notificationService, times(3)).loadDir(any());
+    verify(emailNotificationLoader, times(3)).loadDir(any());
   }
 
   @Test
-  void shouldReturnEmptyListOfFilesWhenNotificationFolderAbsent() throws Exception {
+  void shouldReturnEmptyListOfFilesWhenNotificationFolderAbsent() {
     when(args.containsOption("notification_templates")).thenReturn(true);
     appProperties.setNotificationsDirectoryName(notificationDirectoryName + "a");
     notificationTemplatePublisherApplication.run(args);
 
-    verify(notificationService, never()).loadDir(any());
+    verify(emailNotificationLoader, never()).loadDir(any());
   }
 
 }
