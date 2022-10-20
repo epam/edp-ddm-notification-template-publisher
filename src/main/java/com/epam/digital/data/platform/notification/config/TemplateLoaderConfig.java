@@ -19,6 +19,7 @@ package com.epam.digital.data.platform.notification.config;
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.epam.digital.data.platform.notification.service.EmailNotificationLoader;
+import com.epam.digital.data.platform.notification.service.InboxNotificationLoader;
 import com.epam.digital.data.platform.notification.service.NotificationDirectoryLoader;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
@@ -47,10 +48,19 @@ public class TemplateLoaderConfig {
         new EmailNotificationLoader(
             restClient,
             new JsonSchemaFileValidator(
-                "classpath:schema/email-notification-metadata-schema.json",
+                "classpath:schema/single-title-notification-metadata-schema.json",
                 resourceLoader,
                 yamlMapper),
-            yamlMapper));
+            yamlMapper),
+        "inbox",
+        new InboxNotificationLoader(
+            restClient,
+            new JsonSchemaFileValidator(
+                "classpath:schema/single-title-notification-metadata-schema.json",
+                resourceLoader,
+                yamlMapper),
+            yamlMapper
+        ));
   }
 
   @Bean

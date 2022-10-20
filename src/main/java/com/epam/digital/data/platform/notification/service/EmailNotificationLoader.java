@@ -17,72 +17,58 @@
 package com.epam.digital.data.platform.notification.service;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
-import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
+import com.epam.digital.data.platform.notification.dto.NotificationDto;
 import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
 import com.epam.digital.data.platform.notification.exceptions.NotificationBuildingException;
 import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
-import com.epam.digital.data.platform.notification.model.NotificationYamlObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
-import org.springframework.stereotype.Service;
 
 import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Base64;
-import java.util.stream.Collectors;
 
 @Slf4j
-@RequiredArgsConstructor
-public class EmailNotificationLoader implements NotificationDirectoryLoader {
+public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
 
-  private final NotificationTemplateRestClient templateRestClient;
-  private final JsonSchemaFileValidator emailSchemaValidator;
-  private final ObjectMapper yamlMapper;
+  public EmailNotificationLoader(NotificationTemplateRestClient templateRestClient,
+      JsonSchemaFileValidator schemaValidator, ObjectMapper yamlMapper) {
+    super(templateRestClient, schemaValidator, yamlMapper);
+  }
 
   @Override
-  public void loadDir(File dir) {
+  public NotificationDto getNotificationDto(File dir) throws IOException {
     log.info("Processing email template {}", dir.getName());
-    try {
-      var indexFile = Path.of(dir.getPath(), "notification.ftlh").toFile();
-      var htmlString = FileUtils.readFileToString(indexFile, StandardCharsets.UTF_8);
-      var document = Jsoup.parse(htmlString);
-      document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
+    var indexFile = Path.of(dir.getPath(), "notification.ftlh").toFile();
+    var htmlString = FileUtils.readFileToString(indexFile, StandardCharsets.UTF_8);
+    var document = Jsoup.parse(htmlString);
+    document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
 
-      embedImagesToHtml(document, dir);
-      embedStyleToHtml(document, dir);
+    embedImagesToHtml(document, dir);
+    embedStyleToHtml(document, dir);
 
-      SaveNotificationTemplateInputDto inputDto;
-      var templateMetadataFile = Path.of(dir.getPath(), "notification.yml").toFile();
-      if (templateMetadataFile.exists()) {
-        emailSchemaValidator.validate(templateMetadataFile);
-        var templateMetadata =
-            yamlMapper.readValue(templateMetadataFile, NotificationYamlObject.class);
-        inputDto =
-            SaveNotificationTemplateInputDto.builder()
-                .content(document.toString())
-                .title(templateMetadata.getTitle())
-                .attributes(
-                    templateMetadata.getAttributes().entrySet().stream()
-                        .map(
-                            attr ->
-                                new NotificationTemplateAttributeDto(
-                                    attr.getKey(), attr.getValue()))
-                        .collect(Collectors.toList()))
-                .build();
-      } else {
-        inputDto = SaveNotificationTemplateInputDto.builder().content(document.toString()).build();
-      }
-      templateRestClient.saveTemplate("email", dir.getName(), inputDto);
-    } catch (Exception e) {
-      log.error("Failed processing template {}. Error: {}", dir.getName(), e);
-    }
+    var templateMetadataFile = Path.of(dir.getPath(), "notification.yml").toFile();
+
+    return NotificationDto.builder()
+        .channel("email")
+        .templateMetadataFile(templateMetadataFile)
+        .content(document.toString())
+        .build();
+  }
+
+  @Override
+  public SaveNotificationTemplateInputDto getDefaultSaveNotificationTemplateInputDto(
+      NotificationDto notificationDto) {
+
+    return SaveNotificationTemplateInputDto.builder().content(notificationDto.getContent())
+        .build();
   }
 
   private void embedImagesToHtml(Document htmlDocument, File dir) {
@@ -94,8 +80,8 @@ public class EmailNotificationLoader implements NotificationDirectoryLoader {
         image.attr("src", "data:image/jpeg;base64," + base64encodedImage);
       } catch (Exception e) {
         throw new NotificationBuildingException(
-                String.format("Failed to embed picture \"%s\" into template",
-                        image.attr("src")), e);
+            String.format("Failed to embed picture \"%s\" into template",
+                image.attr("src")), e);
       }
     }
   }
@@ -104,7 +90,7 @@ public class EmailNotificationLoader implements NotificationDirectoryLoader {
     Elements link = document.select("link");
     for (Element element : link) {
       String styleName = element.attr("href");
-      if(styleName != null && !styleName.isEmpty()) {
+      if (styleName != null && !styleName.isEmpty()) {
         var styleFile = Path.of(dir.getPath(), "css", styleName).toFile();
         try {
           document.head().select("link").remove();

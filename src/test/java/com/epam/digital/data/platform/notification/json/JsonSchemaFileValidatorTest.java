@@ -45,7 +45,7 @@ class JsonSchemaFileValidatorTest {
   void expectEmailValidationPassed() throws FileNotFoundException {
     validator =
             new JsonSchemaFileValidator(
-                    "classpath:schema/email-notification-metadata-schema.json", resourceLoader, yamlMapper);
+                    "classpath:schema/single-title-notification-metadata-schema.json", resourceLoader, yamlMapper);
 
     var metadataFile = ResourceUtils.getFile(
             "classpath:notifications/email/SentEmailNotificationWithMetadata/notification2.yml");
@@ -56,7 +56,7 @@ class JsonSchemaFileValidatorTest {
   void expectEmailValidationErrorForAttributes() throws FileNotFoundException {
     validator =
         new JsonSchemaFileValidator(
-            "classpath:schema/email-notification-metadata-schema.json", resourceLoader, yamlMapper);
+            "classpath:schema/single-title-notification-metadata-schema.json", resourceLoader, yamlMapper);
 
     var metadataFile = ResourceUtils.getFile(
             "classpath:notifications/email/SentEmailNotificationWithMetadata/notification.yml");
