@@ -26,8 +26,13 @@ import java.nio.file.Path;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.io.FileUtils;
 
+import static com.epam.digital.data.platform.notification.service.NotificationChannel.INBOX;
+
 @Slf4j
 public class InboxNotificationLoader extends AbstractGenericNotificationLoader {
+
+  private static final String TEMPLATE_CONTENT_FILE_NAME = "notification.ftl";
+  private static final String TEMPLATE_METADATA_FILE_NAME = "notification.yml";
 
   public InboxNotificationLoader(NotificationTemplateRestClient templateRestClient,
       JsonSchemaFileValidator schemaValidator, ObjectMapper yamlMapper) {
@@ -37,15 +42,15 @@ public class InboxNotificationLoader extends AbstractGenericNotificationLoader {
   @Override
   public NotificationDto getNotificationDto(File dir) throws IOException {
     log.info("Processing inbox template {}", dir.getName());
-    var indexFile = Path.of(dir.getPath(), "notification.ftl").toFile();
+    var indexFile = Path.of(dir.getPath(), TEMPLATE_CONTENT_FILE_NAME).toFile();
     var content = FileUtils.readFileToString(indexFile, StandardCharsets.UTF_8);
 
-    var templateMetadataFile = Path.of(dir.getPath(), "notification.yml").toFile();
+    var templateMetadataFile = Path.of(dir.getPath(), TEMPLATE_METADATA_FILE_NAME).toFile();
 
     return NotificationDto.builder()
         .content(content)
         .templateMetadataFile(templateMetadataFile)
-        .channel("inbox")
+        .channel(INBOX.getChannelName())
         .build();
   }
 }

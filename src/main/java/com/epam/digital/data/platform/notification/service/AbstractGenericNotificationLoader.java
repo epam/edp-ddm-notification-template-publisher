@@ -17,15 +17,14 @@ package com.epam.digital.data.platform.notification.service;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationDto;
-import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
 import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
 import com.epam.digital.data.platform.notification.exceptions.NoFilesFoundException;
 import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
+import com.epam.digital.data.platform.notification.mapper.NotificationMetadataMapper;
 import com.epam.digital.data.platform.notification.model.NotificationYamlObject;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
-import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -41,12 +40,10 @@ public abstract class AbstractGenericNotificationLoader implements NotificationD
   public void loadDir(File dir) {
     try {
       var notificationDto = getNotificationDto(dir);
-      var templateMetadataFile = notificationDto.getTemplateMetadataFile();
 
       SaveNotificationTemplateInputDto inputDto;
-      if (templateMetadataFile.exists()) {
-        inputDto = getSaveNotificationTemplateInputDtoWithMetadata(notificationDto,
-            templateMetadataFile);
+      if (notificationDto.getTemplateMetadataFile().exists()) {
+        inputDto = getSaveNotificationTemplateInputDtoWithMetadata(notificationDto);
       } else {
         inputDto = getDefaultSaveNotificationTemplateInputDto(notificationDto);
       }
@@ -59,23 +56,15 @@ public abstract class AbstractGenericNotificationLoader implements NotificationD
   }
 
   protected SaveNotificationTemplateInputDto getSaveNotificationTemplateInputDtoWithMetadata(
-      NotificationDto notificationDto, File templateMetadataFile) throws IOException {
+      NotificationDto notificationDto) throws IOException {
     SaveNotificationTemplateInputDto inputDto;
+    File templateMetadataFile = notificationDto.getTemplateMetadataFile();
     schemaValidator.validate(templateMetadataFile);
     var templateMetadata =
         yamlMapper.readValue(templateMetadataFile, NotificationYamlObject.class);
-    inputDto =
-        SaveNotificationTemplateInputDto.builder()
-            .content(notificationDto.getContent())
-            .title(templateMetadata.getTitle())
-            .attributes(
-                templateMetadata.getAttributes().entrySet().stream()
-                    .map(
-                        attr ->
-                            new NotificationTemplateAttributeDto(
-                                attr.getKey(), attr.getValue()))
-                    .collect(Collectors.toList()))
-            .build();
+    inputDto = NotificationMetadataMapper
+        .toSaveNotificationTemplateInputDto(templateMetadata);
+    inputDto.setContent(notificationDto.getContent());
     return inputDto;
   }
 

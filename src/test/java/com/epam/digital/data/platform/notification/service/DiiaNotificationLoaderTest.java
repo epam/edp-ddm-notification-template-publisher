@@ -22,9 +22,6 @@ import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateI
 import com.epam.digital.data.platform.notification.exceptions.JsonSchemaValidationException;
 import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.lang3.StringUtils;
-import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -34,9 +31,7 @@ import org.mockito.Mock;
 import org.springframework.test.context.junit.jupiter.SpringExtension;
 
 import java.io.File;
-import java.io.IOException;
 import java.net.URISyntaxException;
-import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -48,11 +43,7 @@ import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(SpringExtension.class)
-class EmailNotificationLoaderTest {
-
-  private static String expectedResult;
-
-  private File notificationFile;
+class DiiaNotificationLoaderTest {
 
   @Mock
   private NotificationTemplateRestClient notificationTemplateRestClient;
@@ -61,70 +52,47 @@ class EmailNotificationLoaderTest {
   @Captor
   private ArgumentCaptor<SaveNotificationTemplateInputDto> templateCaptor;
 
-  private NotificationDirectoryLoader emailNotificationLoader;
+  private NotificationDirectoryLoader diiaNotificationLoader;
 
 
   @BeforeEach
   void init() {
-    emailNotificationLoader =
-        new EmailNotificationLoader(
+    diiaNotificationLoader =
+        new DiiaNotificationLoader(
             notificationTemplateRestClient, schemaFileValidator, new YAMLMapper());
-  }
-
-  @BeforeAll
-  static void setup() throws IOException, URISyntaxException {
-    var correctResultFile = getFile("/notifications/email/correctResult.ftlh");
-    expectedResult = FileUtils.readFileToString(correctResultFile, StandardCharsets.UTF_8);
   }
 
   @Test
   void shouldSave() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotification");
+    var notificationFile = getFile("/notifications/diia/valid");
 
-    emailNotificationLoader.loadDir(notificationFile);
-    verifyNoInteractions(schemaFileValidator);
+    diiaNotificationLoader.loadDir(notificationFile);
     verify(notificationTemplateRestClient)
-        .saveTemplate(eq("email"), eq("SentEmailNotification"), templateCaptor.capture());
+        .saveTemplate(eq("diia"), eq("valid"), templateCaptor.capture());
 
     var actualNotificationTemplateDto = templateCaptor.getValue();
-    assertThat(actualNotificationTemplateDto.getTitle()).isNull();
-    assertThat(StringUtils.deleteWhitespace(actualNotificationTemplateDto.getContent()))
-        .isEqualTo(StringUtils.deleteWhitespace(expectedResult));
-    assertThat(actualNotificationTemplateDto.getAttributes()).isNull();
-  }
-
-  @Test
-  void shouldSaveWithMetadata() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotificationWithMetadata");
-
-    emailNotificationLoader.loadDir(notificationFile);
-
-    verify(schemaFileValidator)
-        .validate(
-            getFile("/notifications/email/SentEmailNotificationWithMetadata/notification.yml"));
-    verify(notificationTemplateRestClient)
-        .saveTemplate(eq("email"), eq("SentEmailNotificationWithMetadata"), templateCaptor.capture());
-
-    var actualNotificationTemplateDto = templateCaptor.getValue();
-    assertThat(actualNotificationTemplateDto.getTitle()).isEqualTo("Notification title");
-    assertThat(StringUtils.deleteWhitespace(actualNotificationTemplateDto.getContent()))
-        .isEqualTo(StringUtils.deleteWhitespace(expectedResult));
+    assertThat(actualNotificationTemplateDto.getTitle()).isEqualTo("Some test title");
+    assertThat(actualNotificationTemplateDto.getContent())
+        .isEqualTo("Some test notification template");
     assertThat(actualNotificationTemplateDto.getAttributes())
-        .containsExactly(new NotificationTemplateAttributeDto("name", "value"));
+        .containsExactlyInAnyOrder(new NotificationTemplateAttributeDto("actionType", "message"),
+            new NotificationTemplateAttributeDto("templateType", "template_type"),
+            new NotificationTemplateAttributeDto("shortText", "Attention message"));
+
   }
 
   @Test
   void shouldNotThrowExceptionFromHandling() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotificationWithMetadata");
+    var notificationFile = getFile("/notifications/diia/invalid");
 
     doThrow(new JsonSchemaValidationException("")).when(schemaFileValidator).validate(any());
 
-    assertDoesNotThrow(() -> emailNotificationLoader.loadDir(notificationFile));
+    assertDoesNotThrow(() -> diiaNotificationLoader.loadDir(notificationFile));
 
     verifyNoInteractions(notificationTemplateRestClient);
   }
 
   private static File getFile(String path) throws URISyntaxException {
-    return new File(Objects.requireNonNull(EmailNotificationLoaderTest.class.getResource(path)).toURI());
+    return new File(Objects.requireNonNull(DiiaNotificationLoaderTest.class.getResource(path)).toURI());
   }
 }

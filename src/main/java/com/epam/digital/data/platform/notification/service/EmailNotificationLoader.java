@@ -35,8 +35,13 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.util.Base64;
 
+import static com.epam.digital.data.platform.notification.service.NotificationChannel.EMAIL;
+
 @Slf4j
 public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
+
+  private static final String TEMPLATE_CONTENT_FILE_NAME = "notification.ftlh";
+  private static final String TEMPLATE_METADATA_FILE_NAME = "notification.yml";
 
   public EmailNotificationLoader(NotificationTemplateRestClient templateRestClient,
       JsonSchemaFileValidator schemaValidator, ObjectMapper yamlMapper) {
@@ -46,7 +51,7 @@ public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
   @Override
   public NotificationDto getNotificationDto(File dir) throws IOException {
     log.info("Processing email template {}", dir.getName());
-    var indexFile = Path.of(dir.getPath(), "notification.ftlh").toFile();
+    var indexFile = Path.of(dir.getPath(), TEMPLATE_CONTENT_FILE_NAME).toFile();
     var htmlString = FileUtils.readFileToString(indexFile, StandardCharsets.UTF_8);
     var document = Jsoup.parse(htmlString);
     document.outputSettings().syntax(Document.OutputSettings.Syntax.xml);
@@ -54,10 +59,10 @@ public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
     embedImagesToHtml(document, dir);
     embedStyleToHtml(document, dir);
 
-    var templateMetadataFile = Path.of(dir.getPath(), "notification.yml").toFile();
+    var templateMetadataFile = Path.of(dir.getPath(), TEMPLATE_METADATA_FILE_NAME).toFile();
 
     return NotificationDto.builder()
-        .channel("email")
+        .channel(EMAIL.getChannelName())
         .templateMetadataFile(templateMetadataFile)
         .content(document.toString())
         .build();

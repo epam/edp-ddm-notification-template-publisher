@@ -18,6 +18,7 @@ package com.epam.digital.data.platform.notification.config;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
+import com.epam.digital.data.platform.notification.service.DiiaNotificationLoader;
 import com.epam.digital.data.platform.notification.service.EmailNotificationLoader;
 import com.epam.digital.data.platform.notification.service.InboxNotificationLoader;
 import com.epam.digital.data.platform.notification.service.NotificationDirectoryLoader;
@@ -34,6 +35,10 @@ import org.springframework.core.io.ResourceLoader;
 
 import java.util.Map;
 
+import static com.epam.digital.data.platform.notification.service.NotificationChannel.DIIA;
+import static com.epam.digital.data.platform.notification.service.NotificationChannel.EMAIL;
+import static com.epam.digital.data.platform.notification.service.NotificationChannel.INBOX;
+
 @Configuration
 @EnableFeignClients(clients = NotificationTemplateRestClient.class)
 public class TemplateLoaderConfig {
@@ -44,7 +49,7 @@ public class TemplateLoaderConfig {
       ResourceLoader resourceLoader,
       @Qualifier("yamlMapper") ObjectMapper yamlMapper) {
     return Map.of(
-        "email",
+        EMAIL.getChannelName(),
         new EmailNotificationLoader(
             restClient,
             new JsonSchemaFileValidator(
@@ -52,7 +57,15 @@ public class TemplateLoaderConfig {
                 resourceLoader,
                 yamlMapper),
             yamlMapper),
-        "inbox",
+        DIIA.getChannelName(),
+        new DiiaNotificationLoader(
+            restClient,
+            new JsonSchemaFileValidator(
+                "classpath:schema/diia-notification-metadata-schema.json",
+                resourceLoader,
+                yamlMapper),
+            yamlMapper),
+        INBOX.getChannelName(),
         new InboxNotificationLoader(
             restClient,
             new JsonSchemaFileValidator(
