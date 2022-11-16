@@ -1,5 +1,0 @@
-title: "Some test title"
-attributes:
-  actionType: "message"
-  templateType: "template_type"
-  shortText: "Attention message"

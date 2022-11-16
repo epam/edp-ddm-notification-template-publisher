@@ -19,8 +19,6 @@ package com.epam.digital.data.platform.notification.service;
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
 import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
-import com.epam.digital.data.platform.notification.exceptions.JsonSchemaValidationException;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -35,20 +33,14 @@ import java.net.URISyntaxException;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(SpringExtension.class)
 class DiiaNotificationLoaderTest {
 
   @Mock
   private NotificationTemplateRestClient notificationTemplateRestClient;
-  @Mock
-  private JsonSchemaFileValidator schemaFileValidator;
   @Captor
   private ArgumentCaptor<SaveNotificationTemplateInputDto> templateCaptor;
 
@@ -59,16 +51,16 @@ class DiiaNotificationLoaderTest {
   void init() {
     diiaNotificationLoader =
         new DiiaNotificationLoader(
-            notificationTemplateRestClient, schemaFileValidator, new YAMLMapper());
+            notificationTemplateRestClient, new YAMLMapper());
   }
 
   @Test
   void shouldSave() throws URISyntaxException {
-    var notificationFile = getFile("/notifications/diia/valid");
+    var notificationFile = getFile("/notifications/diia/SendDiiaNotificationWithMetadata");
 
     diiaNotificationLoader.loadDir(notificationFile);
     verify(notificationTemplateRestClient)
-        .saveTemplate(eq("diia"), eq("valid"), templateCaptor.capture());
+        .saveTemplate(eq("diia"), eq("SendDiiaNotificationWithMetadata"), templateCaptor.capture());
 
     var actualNotificationTemplateDto = templateCaptor.getValue();
     assertThat(actualNotificationTemplateDto.getTitle()).isEqualTo("Some test title");
@@ -79,17 +71,6 @@ class DiiaNotificationLoaderTest {
             new NotificationTemplateAttributeDto("templateType", "template_type"),
             new NotificationTemplateAttributeDto("shortText", "Attention message"));
 
-  }
-
-  @Test
-  void shouldNotThrowExceptionFromHandling() throws URISyntaxException {
-    var notificationFile = getFile("/notifications/diia/invalid");
-
-    doThrow(new JsonSchemaValidationException("")).when(schemaFileValidator).validate(any());
-
-    assertDoesNotThrow(() -> diiaNotificationLoader.loadDir(notificationFile));
-
-    verifyNoInteractions(notificationTemplateRestClient);
   }
 
   private static File getFile(String path) throws URISyntaxException {

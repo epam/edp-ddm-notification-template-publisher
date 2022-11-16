@@ -17,7 +17,6 @@
 package com.epam.digital.data.platform.notification.config;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.epam.digital.data.platform.notification.service.DiiaNotificationLoader;
 import com.epam.digital.data.platform.notification.service.EmailNotificationLoader;
 import com.epam.digital.data.platform.notification.service.InboxNotificationLoader;
@@ -31,7 +30,6 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
-import org.springframework.core.io.ResourceLoader;
 
 import java.util.Map;
 
@@ -46,32 +44,19 @@ public class TemplateLoaderConfig {
   @Bean
   public Map<String, NotificationDirectoryLoader> templateDirLoaders(
       NotificationTemplateRestClient restClient,
-      ResourceLoader resourceLoader,
       @Qualifier("yamlMapper") ObjectMapper yamlMapper) {
     return Map.of(
         EMAIL.getChannelName(),
         new EmailNotificationLoader(
             restClient,
-            new JsonSchemaFileValidator(
-                "classpath:schema/single-title-notification-metadata-schema.json",
-                resourceLoader,
-                yamlMapper),
             yamlMapper),
         DIIA.getChannelName(),
         new DiiaNotificationLoader(
             restClient,
-            new JsonSchemaFileValidator(
-                "classpath:schema/diia-notification-metadata-schema.json",
-                resourceLoader,
-                yamlMapper),
             yamlMapper),
         INBOX.getChannelName(),
         new InboxNotificationLoader(
             restClient,
-            new JsonSchemaFileValidator(
-                "classpath:schema/single-title-notification-metadata-schema.json",
-                resourceLoader,
-                yamlMapper),
             yamlMapper
         ));
   }

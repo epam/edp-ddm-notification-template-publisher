@@ -19,8 +19,6 @@ package com.epam.digital.data.platform.notification.service;
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
 import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
-import com.epam.digital.data.platform.notification.exceptions.JsonSchemaValidationException;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.lang3.StringUtils;
@@ -40,12 +38,8 @@ import java.nio.charset.StandardCharsets;
 import java.util.Objects;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 @ExtendWith(SpringExtension.class)
 class EmailNotificationLoaderTest {
@@ -56,8 +50,6 @@ class EmailNotificationLoaderTest {
 
   @Mock
   private NotificationTemplateRestClient notificationTemplateRestClient;
-  @Mock
-  private JsonSchemaFileValidator schemaFileValidator;
   @Captor
   private ArgumentCaptor<SaveNotificationTemplateInputDto> templateCaptor;
 
@@ -68,7 +60,7 @@ class EmailNotificationLoaderTest {
   void init() {
     emailNotificationLoader =
         new EmailNotificationLoader(
-            notificationTemplateRestClient, schemaFileValidator, new YAMLMapper());
+            notificationTemplateRestClient, new YAMLMapper());
   }
 
   @BeforeAll
@@ -79,31 +71,27 @@ class EmailNotificationLoaderTest {
 
   @Test
   void shouldSave() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotification");
+    notificationFile = getFile("/notifications/email/SendEmailNotification");
 
     emailNotificationLoader.loadDir(notificationFile);
-    verifyNoInteractions(schemaFileValidator);
     verify(notificationTemplateRestClient)
-        .saveTemplate(eq("email"), eq("SentEmailNotification"), templateCaptor.capture());
+        .saveTemplate(eq("email"), eq("SendEmailNotification"), templateCaptor.capture());
 
     var actualNotificationTemplateDto = templateCaptor.getValue();
     assertThat(actualNotificationTemplateDto.getTitle()).isNull();
     assertThat(StringUtils.deleteWhitespace(actualNotificationTemplateDto.getContent()))
         .isEqualTo(StringUtils.deleteWhitespace(expectedResult));
-    assertThat(actualNotificationTemplateDto.getAttributes()).isNull();
+    assertThat(actualNotificationTemplateDto.getAttributes()).isEmpty();
   }
 
   @Test
   void shouldSaveWithMetadata() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotificationWithMetadata");
+    notificationFile = getFile("/notifications/email/SendEmailNotificationWithMetadata");
 
     emailNotificationLoader.loadDir(notificationFile);
 
-    verify(schemaFileValidator)
-        .validate(
-            getFile("/notifications/email/SentEmailNotificationWithMetadata/notification.yml"));
     verify(notificationTemplateRestClient)
-        .saveTemplate(eq("email"), eq("SentEmailNotificationWithMetadata"), templateCaptor.capture());
+        .saveTemplate(eq("email"), eq("SendEmailNotificationWithMetadata"), templateCaptor.capture());
 
     var actualNotificationTemplateDto = templateCaptor.getValue();
     assertThat(actualNotificationTemplateDto.getTitle()).isEqualTo("Notification title");
@@ -111,17 +99,6 @@ class EmailNotificationLoaderTest {
         .isEqualTo(StringUtils.deleteWhitespace(expectedResult));
     assertThat(actualNotificationTemplateDto.getAttributes())
         .containsExactly(new NotificationTemplateAttributeDto("name", "value"));
-  }
-
-  @Test
-  void shouldNotThrowExceptionFromHandling() throws URISyntaxException {
-    notificationFile = getFile("/notifications/email/SentEmailNotificationWithMetadata");
-
-    doThrow(new JsonSchemaValidationException("")).when(schemaFileValidator).validate(any());
-
-    assertDoesNotThrow(() -> emailNotificationLoader.loadDir(notificationFile));
-
-    verifyNoInteractions(notificationTemplateRestClient);
   }
 
   private static File getFile(String path) throws URISyntaxException {

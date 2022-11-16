@@ -17,7 +17,6 @@ package com.epam.digital.data.platform.notification.service;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationDto;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.File;
 import java.io.IOException;
@@ -34,9 +33,8 @@ public class InboxNotificationLoader extends AbstractGenericNotificationLoader {
   private static final String TEMPLATE_CONTENT_FILE_NAME = "notification.ftl";
   private static final String TEMPLATE_METADATA_FILE_NAME = "notification.yml";
 
-  public InboxNotificationLoader(NotificationTemplateRestClient templateRestClient,
-      JsonSchemaFileValidator schemaValidator, ObjectMapper yamlMapper) {
-    super(templateRestClient, schemaValidator, yamlMapper);
+  public InboxNotificationLoader(NotificationTemplateRestClient templateRestClient, ObjectMapper yamlMapper) {
+    super(templateRestClient, yamlMapper);
   }
 
   @Override

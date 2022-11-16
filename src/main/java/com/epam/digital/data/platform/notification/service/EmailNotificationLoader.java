@@ -18,9 +18,7 @@ package com.epam.digital.data.platform.notification.service;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationDto;
-import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
 import com.epam.digital.data.platform.notification.exceptions.NotificationBuildingException;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.IOException;
 import lombok.extern.slf4j.Slf4j;
@@ -43,9 +41,8 @@ public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
   private static final String TEMPLATE_CONTENT_FILE_NAME = "notification.ftlh";
   private static final String TEMPLATE_METADATA_FILE_NAME = "notification.yml";
 
-  public EmailNotificationLoader(NotificationTemplateRestClient templateRestClient,
-      JsonSchemaFileValidator schemaValidator, ObjectMapper yamlMapper) {
-    super(templateRestClient, schemaValidator, yamlMapper);
+  public EmailNotificationLoader(NotificationTemplateRestClient templateRestClient, ObjectMapper yamlMapper) {
+    super(templateRestClient, yamlMapper);
   }
 
   @Override
@@ -65,14 +62,6 @@ public class EmailNotificationLoader extends AbstractGenericNotificationLoader {
         .channel(EMAIL.getChannelName())
         .templateMetadataFile(templateMetadataFile)
         .content(document.toString())
-        .build();
-  }
-
-  @Override
-  public SaveNotificationTemplateInputDto getDefaultSaveNotificationTemplateInputDto(
-      NotificationDto notificationDto) {
-
-    return SaveNotificationTemplateInputDto.builder().content(notificationDto.getContent())
         .build();
   }
 

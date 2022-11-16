@@ -16,15 +16,12 @@
 package com.epam.digital.data.platform.notification.service;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.verifyNoInteractions;
 
 import com.epam.digital.data.platform.notification.client.NotificationTemplateRestClient;
 import com.epam.digital.data.platform.notification.dto.NotificationTemplateAttributeDto;
 import com.epam.digital.data.platform.notification.dto.SaveNotificationTemplateInputDto;
-import com.epam.digital.data.platform.notification.json.JsonSchemaFileValidator;
 import com.fasterxml.jackson.dataformat.yaml.YAMLMapper;
 import java.io.File;
 import java.io.IOException;
@@ -52,8 +49,6 @@ class InboxNotificationLoaderTest {
 
   @Mock
   private NotificationTemplateRestClient notificationTemplateRestClient;
-  @Mock
-  private JsonSchemaFileValidator schemaFileValidator;
   @Captor
   private ArgumentCaptor<SaveNotificationTemplateInputDto> templateCaptor;
 
@@ -64,12 +59,13 @@ class InboxNotificationLoaderTest {
   void init() {
     inboxNotificationLoader =
         new InboxNotificationLoader(
-            notificationTemplateRestClient, schemaFileValidator, new YAMLMapper());
+            notificationTemplateRestClient, new YAMLMapper());
   }
 
   @BeforeAll
   static void setup() throws IOException, URISyntaxException {
-    File correctResultFile = getFile("/notifications/inbox/SendInboxNotification/notification.ftl");
+    File correctResultFile =
+        getFile("/notifications/inbox/SendInboxNotificationWithMetadata/notification.ftl");
     expectedResult = FileUtils.readFileToString(correctResultFile, StandardCharsets.UTF_8);
   }
 
@@ -80,9 +76,6 @@ class InboxNotificationLoaderTest {
 
     inboxNotificationLoader.loadDir(notificationFile);
 
-    verify(schemaFileValidator)
-        .validate(
-            getFile("/notifications/inbox/SendInboxNotificationWithMetadata/notification.yml"));
     verify(notificationTemplateRestClient)
         .saveTemplate(eq("inbox"), eq("SendInboxNotificationWithMetadata"),
             templateCaptor.capture());
@@ -93,18 +86,6 @@ class InboxNotificationLoaderTest {
         .isEqualTo(StringUtils.deleteWhitespace(expectedResult));
     assertThat(actualNotificationTemplateDto.getAttributes())
         .containsExactly(new NotificationTemplateAttributeDto("name", "value"));
-  }
-
-
-  @Test
-  @SneakyThrows
-  void shouldNotSaveWhenMetaDataFileIsMissing() {
-    notificationFile = getFile("/notifications/inbox/SendInboxNotification");
-
-    assertDoesNotThrow(() -> inboxNotificationLoader.loadDir(notificationFile));
-
-    verifyNoInteractions(notificationTemplateRestClient);
-    verifyNoInteractions(schemaFileValidator);
   }
 
   protected static File getFile(String path) throws URISyntaxException {

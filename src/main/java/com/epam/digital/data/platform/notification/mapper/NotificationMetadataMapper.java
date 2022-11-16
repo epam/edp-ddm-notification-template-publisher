@@ -10,6 +10,8 @@ import java.util.stream.Collectors;
 
 public class NotificationMetadataMapper {
 
+  private NotificationMetadataMapper() {}
+
   public static SaveNotificationTemplateInputDto toSaveNotificationTemplateInputDto(NotificationYamlObject src) {
     return SaveNotificationTemplateInputDto.builder()
         .title(src.getTitle())
