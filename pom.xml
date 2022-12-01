@@ -17,6 +17,7 @@
 
 	<properties>
 		<java.version>11</java.version>
+		<spring-boot-maven-plugin.version>2.7.5</spring-boot-maven-plugin.version>
 		<notification-service-api.version>1.8.0.3</notification-service-api.version>
 		<jackson.version>2.9.8</jackson.version>
 		<json-schema-validator.version>1.0.57</json-schema-validator.version>
@@ -113,6 +114,7 @@
 			<plugin>
 				<groupId>org.springframework.boot</groupId>
 				<artifactId>spring-boot-maven-plugin</artifactId>
+				<version>${spring-boot-maven-plugin.version}</version>
 			</plugin>
 		</plugins>
 	</build>
